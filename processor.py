@@ -2,7 +2,7 @@
 Channel Processing System:
 A Python utility to augment measured performance data and calculate metrics.
 """
-import argparse
+import argparse, statistics
 
 
 class ChannelProcessor:
@@ -10,6 +10,18 @@ class ChannelProcessor:
     The ChannelProcessor class defines methods to read, write and process
     channel data to calculate metrics.
     """
+
+    def __init__(self) -> None:
+        self.files = self.parse_args()
+        self.metrics = {}
+        self.channels_dict = self.read_channels(self.files.channels_file)
+        self.parameters_dict = self.read_parameters(self.files.parameters_file)
+        self.process_data()
+        print("Value of the metric b (mean of Channel B) is %s" % self.metrics['b'])
+        
+        for ch_name, ch_data in self.channels_dict.items():
+            if ch_name != 'X':
+                self.write_channels(ch_name, ch_data, self.files.channels_file)
 
     # Use the argparse module to parse command line input parameters for
     # reading channel and parameter data files. Define channel and parameter
@@ -63,6 +75,23 @@ class ChannelProcessor:
             channels[channel_name] = channel_data
         return channels
 
+    def process_data(self):
+        X = self.channels_dict['X']
+        m = self.parameters_dict['m']
+        c = self.parameters_dict['c']
+        
+        Y = [float(m) * float(X_el) + float(c) for X_el in X]
+        A = [1 / float(X_element) for X_element in X]
+        B = [float(A_element) + float(Y_element) for A_element, Y_element in zip(A, Y)]
+        b = statistics.mean (B)
+        C = [float(X_item) + b for X_item  in X]
+
+        self.channels_dict['Y'] = Y
+        self.channels_dict['A'] = A
+        self.channels_dict['B'] = B
+        self.metrics['b'] = b
+        self.channels_dict['C'] = C
+
     def write_channels(self, channel_name, channel_data, channels_file):
         """
         Creates a new channel data entry in the given channels data file.
@@ -92,14 +121,9 @@ class ChannelProcessor:
         for line in parameter_stream:
             parameter_data = line.split(",")
             parameter_name = parameter_data.pop(0)
-            parameters[parameter_name] = parameter_data
+            parameters[parameter_name] = parameter_data.pop(0)
         return parameters
 
 
 if __name__ == "__main__":
     processor = ChannelProcessor()
-    files = processor.parse_args()
-    channels_list = processor.read_channels(files.channels_file)
-    for ch_name, ch_data in channels_list.items():
-        processor.write_channels(
-            ch_name, channels_list[ch_name], files.channels_file)
