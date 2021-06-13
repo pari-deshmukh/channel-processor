@@ -79,6 +79,22 @@ class ChannelProcessor:
             channel_stream.write(', '.join('%s' % x for x in channel_data))
             channel_stream.close()
 
+    def read_parameters(self, parameters_file):
+        """
+        Reads parameters from the input file, processes them into a
+        dictionary and returns the dictionary of parameters.
+        """
+        # Initialize a blank tuple for storing parameters.
+        parameters = {}
+        # Read through the parameters data file and filter out blank lines.
+        parameter_stream = filter(None, open(
+            parameters_file, 'r').read().splitlines())
+        for line in parameter_stream:
+            parameter_data = line.split(",")
+            parameter_name = parameter_data.pop(0)
+            parameters[parameter_name] = parameter_data
+        return parameters
+
 
 if __name__ == "__main__":
     processor = ChannelProcessor()
